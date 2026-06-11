@@ -29,8 +29,45 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploying to production
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This app server-renders pages and uses API route handlers for auth, so it must
+run as a **long-running Node.js server** (`next start`) — it is not a static
+export.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 1. Environment variables
+
+Copy `.env.example` and fill it in. The only required variable is:
+
+| Variable      | Required | Notes                                                      |
+| ------------- | -------- | ---------------------------------------------------------- |
+| `AUTH_SECRET` | **yes**  | Signs session cookies. Generate with `openssl rand -hex 32`. |
+
+In production the app **refuses to sign sessions if `AUTH_SECRET` is unset** —
+it will throw rather than silently fall back to an insecure dev secret.
+
+### 2. Build and start
+
+```bash
+npm ci          # install exact, locked dependencies
+npm run build   # produce the optimized production build
+npm run start   # start the server (defaults to port 3000; override with PORT)
+```
+
+### 3. Data persistence (important)
+
+User accounts are stored in a JSON file at `data/users.json` on the local
+filesystem (see `lib/users.ts`). This means:
+
+- The host **must provide a persistent, writable disk** mounted at the project
+  root. A VPS, container with a volume, or a host like Railway/Render/Fly.io
+  with a persistent volume all work.
+- **Serverless/edge platforms (e.g. Vercel) will not persist this data** —
+  their filesystems are read-only or ephemeral, so registrations and profile
+  edits would be lost between requests. To deploy there, swap `lib/users.ts`
+  for a hosted database (keeping the same exported functions) first.
+
+The `data/` directory is gitignored and is created automatically on first
+write, so no setup is needed beyond providing writable storage.
+
+See the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for platform-specific details.
